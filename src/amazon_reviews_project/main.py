@@ -5,6 +5,13 @@ import time
 import string
 from tqdm import tqdm
 import numpy as np
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import classification_report, confusion_matrix
+from sklearn.model_selection import train_test_split
+import matplotlib.pyplot as plt
+import seaborn as sns
+
 
 # Obtener el directorio actual y subir dos niveles de una vez
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -82,17 +89,6 @@ for i in range(min(3, len(df_train))):
 
 # SECTION OF DATA CLEAN
 
-def clean_review1(text):
-    # Convertir a minúsculas
-    text = text.lower()
-    # Eliminar signos de puntuación
-    text = text.translate(str.maketrans('', '', string.punctuation))
-    # Eliminar números (opcional)
-    text = re.sub(r'\d+', '', text)
-    # Eliminar espacios extras
-    text = re.sub(r'\s+', ' ', text).strip()
-    return text
-
 def clean_review(text):
     # Lowercase
     text = text.lower()
@@ -134,13 +130,42 @@ end = time.time()
 print(f"Time clean review test : {end - start:.2f} segundos")
 print(df_train.head())
 
-
-
-# Aplicar limpieza
-# df_train['clean_review'] = df_train['review'].apply(clean_review)
-# df_test['clean_review'] = df_test['review'].apply(clean_review)
-
 print("\nEjemplos limpios:")
 for i in range(3):
     print(f"\nLabel {df_train.iloc[i]['label']} (limpia):")
     print(df_train.iloc[i]['clean_review'][:150] + "...")
+
+
+#VECTORIZATION AND BASE MODEL
+
+
+# Split train dataset for validation
+# Using a validation set (20%) to evaluate baseline model
+X_train, X_val, y_train, y_val = train_test_split(df_train['review'], df_train['label'], test_size=0.2, random_state=42)
+
+# Convert text into TF-IDF vectors
+# Limiting max features to reduce dimensionality and memory
+vectorizer = TfidfVectorizer(max_features=50000)
+X_train_vec = vectorizer.fit_transform(X_train)
+X_val_vec = vectorizer.transform(X_val)
+
+# Train a logistic regression model as baseline
+print("Training logistic regression model...")
+model = LogisticRegression(max_iter=1000, verbose=1, n_jobs=-1)
+model.fit(X_train_vec, y_train)
+
+# Evaluate model
+y_pred = model.predict(X_val_vec)
+
+# Print performance metrics
+print("\nClassification Report:")
+print(classification_report(y_val, y_pred))
+
+# Plot confusion matrix
+conf_matrix = confusion_matrix(y_val, y_pred)
+plt.figure(figsize=(6, 5))
+sns.heatmap(conf_matrix, annot=True, fmt='d', cmap='Blues')
+plt.xlabel("Predicted")
+plt.ylabel("Actual")
+plt.title("Confusion Matrix")
+plt.show()
