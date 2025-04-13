@@ -1,0 +1,8 @@
+# Carpetas a ignorar
+__pycache__/
+.venv/
+data/
+
+# Archivos compilados de Python
+*.pyc
+*.pyo
